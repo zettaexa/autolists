@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>RYM Autolist Maker</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+/* Raleway font */
+@import url('https://fonts.googleapis.com/css2?family=Raleway&display=swap');
+
+:root{
+  --bg:#000000;
+  --panel:#050505;
+  --border:#0f0f10;
+  --accent:#4ecaff;
+  --accent-2:#7ddfff;
+  --text:#eaf8ff;
+  --muted:#7b98a8;
+  --chip-bg:#0b0b0b;
+  --chip-border:#111;
+  --toggle-unselected: #afe1ff; /* requested */
+  --toggle-selected: #000;
+}
+
+/* Basic */
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'Raleway',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  padding-top:25px;
+  padding-bottom:25px; /* space for footer */
+}
+
+/* Header */
+h1{
+  color:var(--accent);
+  margin:18px 0;
+  text-align:center;
+  font-size:1.4rem;
+}
+
+/* Container */
+.container{ max-width:1100px; margin:0 auto; padding:0 16px; margin-bottom:180px; }
+
+/* Panel */
+.left{ background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px; margin-bottom:18px; }
+
+/* Section header (collapsible) */
+.subheader{
+  color:var(--accent);
+  font-weight:700;
+  font-size:1.02rem;
+  margin-bottom:8px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  cursor:pointer;
+  padding-bottom:6px;
+  border-bottom:1px solid rgba(78,202,255,0.08);
+}
+.subheader-left{ display:flex; align-items:center; gap:10px; }
+.subheader-left i{ color:var(--accent); width:20px; text-align:center; font-size:1rem; }
+.subheader-left span{ display:inline-block; }
+.subheader .chev{ color:var(--muted); font-size:0.92rem; }
+
+/* Section body */
+.section{ margin-bottom:18px; }
+.section-body{ transition:height .18s ease, opacity .18s ease; overflow:hidden; }
+.section-collapsed .section-body{ height:0 !important; opacity:0; padding:0; margin:0; }
+
+/* Inputs */
+input[type="text"], input[type="number"], textarea{
+  width:100%; padding:10px 12px; border-radius:6px; background:#040404; border:1px solid var(--border); color:var(--text);
+  font-size:0.98rem;
+}
+input[type="text"]:focus, input[type="number"]:focus, textarea:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 10px rgba(78,202,255,0.04); }
+
+/* Lists */
+.attributes-list{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; }
+
+/* list item */
+.attr-item{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:10px 12px;
+  border-radius:8px;
+  background:#070707;
+  border:1px solid var(--border);
+  cursor:pointer;
+  transition:all .14s ease;
+  user-select:none;
+  justify-content:flex-start; /* left align main content */
+}
+.attr-item:hover{ border-color:var(--accent-2); color:var(--accent-2); }
+.attr-item.selected{ background:var(--accent); color:#001; border-color:var(--accent); font-weight:700; }
+.attr-item i{ width:22px; text-align:center; font-size:1.05rem; color:var(--muted); }
+.attr-item.selected i{ color:#001; }
+
+/* chips row */
+.chips-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.chip{
+  display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:999px; background:var(--chip-bg);
+  border:1px solid var(--chip-border); color:var(--text); cursor:pointer; font-size:0.95rem; transition:all .12s;
+}
+.chip i{ width:18px; text-align:center; color:var(--muted); }
+.chip:hover{ border-color:var(--accent-2); color:var(--accent-2); }
+.chip.selected{ background:var(--accent); color:#001; border-color:var(--accent); font-weight:700; }
+.chip.selected i{ color:#001; }
+
+/* rating slider */
+.range-container{ position:relative; height:56px; margin-top:10px; }
+.range-container input[type="range"]{ position:absolute; left:0; top:20px; width:100%; -webkit-appearance:none; height:6px; background:transparent; pointer-events:none; }
+.range-container input[type="range"]::-webkit-slider-thumb{ pointer-events:auto; -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:var(--accent); border:2px solid #000; cursor:pointer; z-index:3; }
+.slider-track{ position:absolute; height:6px; top:27px; background:#111; width:100%; border-radius:3px; }
+.slider-range{ position:absolute; height:6px; top:27px; background:var(--accent); border-radius:3px; z-index:2; }
+.range-labels{ display:flex; justify-content:space-between; font-size:0.78rem; color:var(--muted); margin-top:6px; }
+
+/* sort toggle (right) */
+.sort-toggle{ display:flex; gap:6px; margin-left:auto; align-items:center; }
+.sort-toggle button{
+  width:36px; height:30px; border-radius:6px; border:none; cursor:pointer; background:var(--toggle-unselected); color:#001; font-weight:700;
+  display:inline-flex; align-items:center; justify-content:center; transition:all .12s;
+}
+.sort-toggle button.active{ background:var(--toggle-selected); color:#fff; }
+
+/* search toggles (radio-like) */
+.search-toggles{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.search-toggle{
+  padding:8px 10px; border-radius:8px; border:1px solid var(--chip-border); background:var(--chip-bg); color:var(--text); cursor:pointer;
+  display:inline-flex; align-items:center; gap:8px;
+}
+.search-toggle i{ color:var(--muted); width:18px; text-align:center; }
+.search-toggle.active{ background:var(--accent); color:#001; border-color:var(--accent); font-weight:700; }
+.search-toggle.active i{ color:#001; }
+
+/* footer */
+.footer{ position:fixed; left:0; right:0; bottom:0; z-index:999; background:var(--panel); border-top:1px solid var(--border); padding:12px; display:flex; justify-content:center; }
+.footer-inner{ width:100%; max-width:1100px; display:flex; gap:12px; align-items:center; flex-direction:column; }
+.url-box{ width:100%; background:#030303; border:1px solid var(--border); padding:10px 12px; border-radius:8px; font-family:monospace; color:var(--accent); word-break:break-all; font-size:0.95rem; }
+.order-box{ color:var(--muted); font-size:0.88rem; width:100%; text-align:left; margin-bottom:6px; }
+
+/* buttons centered */
+.button-row{ display:flex; gap:10px; justify-content:center; width:100%; max-width:420px; }
+button.copy, button.reset{ display:inline-flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px; border:none; cursor:pointer; font-family:Raleway; font-weight: bold; background:var(--accent); color:#001; }
+button.reset{ background:transparent; border:1px solid var(--chip-border); color:var(--text); }
+button.reset:hover{ border-color:var(--accent-2); color:var(--accent-2); }
+
+/* disabled overlay (for stag exclusivity) */
+.disabled-overlay{ opacity:0.32; pointer-events:none; filter:grayscale(0.2); }
+
+/* small screens */
+@media (max-width:920px){
+  .sort-toggle button{ width:34px; height:28px; }
+  .range-container{ height:64px; }
+  body{ padding-bottom:220px; }
+}
+</style>
+</head>
+<body>
+
+  <h1>RYM Autolist Maker</h1>
+
+  <div class="container">
+    <div class="left">
+
+      <!-- USERNAME -->
+      <div class="section">
+        <div class="subheader" data-toggle="username">
+          <div class="subheader-left"><i class="fa-solid fa-circle-user"></i><span>Username</span></div>
+          <div class="chev"><i class="fa-solid fa-chevron-down"></i></div>
+        </div>
+        <div class="section-body" id="username-body">
+          <input id="username" type="text" placeholder="e.g. sharifi" />
+        </div>
+      </div>
+
+      <!-- CUSTOM TABLE -->
+      <div class="section" id="section-custom">
+        <div class="subheader" data-toggle="custom">
+          <div class="subheader-left"><i class="fa-solid fa-table-columns"></i><span>Custom Table</span></div>
+          <div class="chev"><i class="fa-solid fa-chevron-down"></i></div>
+        </div>
+        <div class="section-body" id="custom-body">
+          <ul class="attributes-list" id="attributesList"></ul>
+        </div>
+      </div>
+
+      <!-- RATING -->
+      <div class="section" id="section-rating">
+        <div class="subheader" data-toggle="rating">
+          <div class="subheader-left"><i class="fa-solid fa-star"></i><span>Ratings</span></div>
+          <div class="chev"><i class="fa-solid fa-chevron-down"></i></div>
+        </div>
+        <div class="section-body" id="rating-body">
+          <div class="range-container">
+            <div class="slider-track"></div>
+            <div class="slider-range" id="sliderRange"></div>
+            <input id="rangeMin" type="range" min="0" max="10" step="1" value="0" />
+            <input id="rangeMax" type="range" min="0" max="10" step="1" value="10" />
+          </div>
+          <div class="range-labels" id="ratingLabels"></div>
+        </div>
+      </div>
+
+      <!-- OWNERSHIP -->
+      <div class="section" id="section-ownership">
+        <div class="subheader" data-toggle="ownership">
+          <div class="subheader-left"><i class="fa-solid fa-box-archive"></i><span>Ownership</span></div>
+          <div class="chev"><i class="fa-solid fa-chevron-down"></i></div>
+        </div>
+        <div class="section-body" id="ownership-body">
+          <div class="chips-row" id="ownershipChips"></div>
+        </div>
+      </div>
+
+      <!-- FORMATS -->
+      <div class="section" id="section-formats">
+        <div class="subheader" data-toggle="formats">
+          <div class="subheader-left"><i class="fa-solid fa-compact-disc"></i><span>Formats</span></div>
+          <div class="chev"><i class="fa-solid fa-chevron-down"></i></div>
+        </div>
+        <div class="section-body" id="formats-body">
+          <div class="chips-row" id="formatChips"></div>
+        </div>
+      </div>
+
+      <!-- RELEASE TYPES -->
+      <div class="section" id="section-types">
+        <div class="subheader" data-toggle="types">
+          <div class="subheader-left"><i class="fa-solid fa-music"></i><span>Release Type</span></div>
+          <div class="chev"><i class="fa-solid fa-chevron-down"></i></div>
+        </div>
+        <div class="section-body" id="types-body">
+          <div class="chips-row" id="typeChips"></div>
+        </div>
+      </div>
+
+      <!-- ORDER / SORT -->
+      <div class="section" id="section-order">
+        <div class="subheader" data-toggle="order">
+          <div class="subheader-left"><i class="fa-solid fa-sort"></i><span>Order</span></div>
+          <div class="chev"><i class="fa-solid fa-chevron-down"></i></div>
+        </div>
+        <div class="section-body" id="order-body">
+          <ul class="attributes-list" id="orderList"></ul>
+        </div>
+      </div>
+
+      <!-- ITEMS PER PAGE -->
+      <div class="section" id="section-perpage">
+        <div class="subheader" data-toggle="perpage">
+          <div class="subheader-left"><i class="fa-solid fa-list-ol"></i><span>Items per Page</span></div>
+          <div class="chev"><i class="fa-solid fa-chevron-down"></i></div>
+        </div>
+        <div class="section-body" id="perpage-body">
+          <input id="itemsPerPage" type="number" min="1" max="500" placeholder="e.g. 50" />
+        </div>
+      </div>
+
+      <!-- SEARCH (bottom) -->
+      <div class="section" id="section-search">
+        <div class="subheader" data-toggle="search">
+          <div class="subheader-left"><i class="fa-solid fa-search"></i><span>Search</span></div>
+          <div class="chev"><i class="fa-solid fa-chevron-down"></i></div>
+        </div>
+        <div class="section-body" id="search-body">
+          <div style="font-size:0.95rem; color:var(--muted); margin-bottom:6px;">
+            Choose only one search type
+          </div>
+          <div class="search-toggles" id="searchToggles">
+            <div class="search-toggle" data-type="strm_a"><i class="fa-solid fa-user"></i>Artist</div>
+            <div class="search-toggle" data-type="strm_l"><i class="fa-solid fa-compact-disc"></i>Title</div>
+            <div class="search-toggle" data-type="strm_q"><i class="fa-solid fa-comment-dots"></i>Review contains</div>
+            <div class="search-toggle" data-type="stag"><i class="fa-solid fa-tag"></i>Tag (exclusive)</div>
+            <div class="search-toggle" data-type="strm_b"><i class="fa-solid fa-building"></i>Label</div>
+            <div class="search-toggle" data-type="strm_h"><i class="fa-solid fa-music"></i>Genre</div>
+            <div class="search-toggle" data-type="strm_relyear"><i class="fa-solid fa-calendar"></i>Year / Decade</div>
+          </div>
+          <div style="margin-top:10px;">
+            <input id="searchText" type="text" placeholder="Search entry, e.g. The Beatles or 1970s" />
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-inner">
+      <div class="order-box" id="orderDisplay">No attributes selected.</div>
+      <div class="url-box" id="urlDisplay">https://rateyourmusic.com/collection/[username]</div>
+      <div class="button-row">
+        <button class="copy" id="copyBtn"><i class="fa-solid fa-copy"></i> Copy URL</button>
+        <button class="reset" id="resetBtn"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ---------------- Data ---------------- */
+const attributes = [
+  { code: "a", label: "Artist", icon: "fa-user" },
+  { code: "l", label: "Release", icon: "fa-compact-disc" },
+  { code: "al", label: "Artist - Release (year)", icon: "fa-music" },
+  { code: "albj", label: "Artist - Release (year) / Label", icon: "fa-building" },
+  { code: "alh", label: "Artist - Release (year) / Genre", icon: "fa-guitar" },
+  { code: "albjh", label: "Artist - Release (year) / Label | Genre", icon: "fa-layer-group" },
+  { code: "aat", label: "Cover", icon: "fa-image" },
+  { code: "ts", label: "Rating (Stars)", icon: "fa-star" },
+  { code: "tn", label: "Rating (Number)", icon: "fa-hashtag" },
+  { code: "o", label: "Ownership / Format", icon: "fa-box-archive" },
+  { code: "g", label: "Tags", icon: "fa-tags" },
+  { code: "tl", label: "Track List", icon: "fa-list" },
+  { code: "v", label: "Review", icon: "fa-pen" },
+  { code: "r", label: "Date Entered", icon: "fa-calendar-day" }
+];
+
+const ownershipOptions = [
+  { code: "o", label: "Owned", icon: "fa-solid fa-check-circle" },
+  { code: "w", label: "Wishlist", icon: "fa-solid fa-heart" },
+  { code: "u", label: "Used to Own", icon: "fa-solid fa-history" },
+  { code: "n", label: "Not Owned", icon: "fa-solid fa-circle-xmark" }
+];
+
+const formatOptions = ["CD","LP","Cassette","MiniDisc","MP3","DVD-A","SACD","Multiple","8-Track","CD-R","Other"];
+
+const typeOptions = [
+  { code: "s", label: "Album" },
+  { code: "m", label: "Mixtape" },
+  { code: "e", label: "EP" },
+  { code: "i", label: "Single" },
+  { code: "o", label: "Music Video" },
+  { code: "j", label: "DJ Mix" },
+  { code: "d", label: "Video" },
+  { code: "c", label: "Compilation" },
+  { code: "b", label: "Bootleg" },
+  { code: "x", label: "Additional Release" }
+];
+
+/* Sort options */
+const sortOptions = [
+  { code: "a", label: "Artist", icon: "fa-user" },
+  { code: "l", label: "Release Title", icon: "fa-compact-disc" },
+  { code: "e", label: "Release Date", icon: "fa-calendar-day" },
+  { code: "t", label: "Cover/Color", icon: "fa-image" },
+  { code: "r", label: "Rating", icon: "fa-star" },
+  { code: "o", label: "Ownership/Format", icon: "fa-box-archive" },
+  { code: "d", label: "Date Entered", icon: "fa-calendar-plus" }
+];
+
+/* ---------------- DOM Refs ---------------- */
+const attributesList = document.getElementById("attributesList");
+const ownershipChips = document.getElementById("ownershipChips");
+const formatChips = document.getElementById("formatChips");
+const typeChips = document.getElementById("typeChips");
+const orderList = document.getElementById("orderList");
+
+const usernameInput = document.getElementById("username");
+const rangeMin = document.getElementById("rangeMin");
+const rangeMax = document.getElementById("rangeMax");
+const ratingLabels = document.getElementById("ratingLabels");
+const itemsPerPage = document.getElementById("itemsPerPage");
+
+const urlDisplay = document.getElementById("urlDisplay");
+const orderDisplay = document.getElementById("orderDisplay");
+const copyBtn = document.getElementById("copyBtn");
+const resetBtn = document.getElementById("resetBtn");
+const sliderRangeEl = document.getElementById("sliderRange");
+
+const searchTogglesWrap = document.getElementById("searchToggles");
+const searchTextInput = document.getElementById("searchText");
+
+/* ---------------- State ---------------- */
+let selectedAttributes = [];
+let selectedOwnership = [];
+let selectedFormats = [];
+let selectedTypes = [];
+let selectedSort = [];        // order of sort fields selected
+let sortDirections = {};      // map: code -> "asc" | "desc"
+
+let ratingMin = parseInt(rangeMin.value);
+let ratingMax = parseInt(rangeMax.value);
+let perPage = "";
+
+let selectedSearchType = null; // e.g. 'strm_a' or 'stag'
+let selectedSearchText = "";
+
+/* ---------------- Helpers ---------------- */
+const ratingVal = v => (v/2).toFixed(1);
+const getBaseURL = () => `https://rateyourmusic.com/collection/${(usernameInput.value.trim() || "[username]")}`;
+
+/* encode X replacing spaces with + */
+function encodeX(text){
+  if(!text) return "";
+  return encodeURIComponent(text).replace(/%20/g, "+");
+}
+
+/* Update slider range fill */
+function updateSliderRange(){
+  const minPerc = (ratingMin/10)*100;
+  const maxPerc = (ratingMax/10)*100;
+  sliderRangeEl.style.left = `${minPerc}%`;
+  sliderRangeEl.style.width = `${maxPerc - minPerc}%`;
+}
+
+/* Render rating labels (0.0 to 5.0 step 0.5) */
+function renderRatingLabels(){
+  const parts = [];
+  for(let i=0;i<=10;i++){
+    parts.push(`<span>${ratingVal(i)}</span>`);
+  }
+  ratingLabels.innerHTML = parts.join("");
+}
+
+/* Build ownership chips with icons */
+function buildOwnershipChips(){
+  ownershipChips.innerHTML = "";
+  ownershipOptions.forEach(opt => {
+    const d = document.createElement("div");
+    d.className = "chip";
+    d.innerHTML = `<i class="${opt.icon}"></i><span>${opt.label}</span>`;
+    d.addEventListener("click", () => {
+      const idx = selectedOwnership.indexOf(opt.code);
+      if(idx !== -1){ selectedOwnership.splice(idx,1); d.classList.remove("selected"); }
+      else{ selectedOwnership.push(opt.code); d.classList.add("selected"); }
+      updateURL();
+    });
+    ownershipChips.appendChild(d);
+  });
+}
+
+/* Build generic chips (formats/types) */
+function buildChip(container, optArr, selectedArr, useLabel = true){
+  container.innerHTML = "";
+  optArr.forEach(opt => {
+    const d = document.createElement("div");
+    d.className = "chip";
+    d.textContent = useLabel ? (opt.label || opt) : (opt.code || opt);
+    d.addEventListener("click", () => {
+      const key = opt.code || opt;
+      const idx = selectedArr.indexOf(key);
+      if(idx !== -1){ selectedArr.splice(idx,1); d.classList.remove("selected"); }
+      else{ selectedArr.push(key); d.classList.add("selected"); }
+      updateURL();
+    });
+    container.appendChild(d);
+  });
+}
+
+/* ---------------- Initialize UI ---------------- */
+/* Attributes list */
+attributesList.innerHTML = "";
+attributes.forEach(attr => {
+  const li = document.createElement("li");
+  li.className = "attr-item";
+  li.innerHTML = `<i class="fa-solid ${attr.icon}"></i><div style="flex:0 1 auto">${attr.label}</div>`;
+  li.addEventListener("click", () => {
+    const idx = selectedAttributes.indexOf(attr.code);
+    if(idx !== -1){ selectedAttributes.splice(idx,1); li.classList.remove("selected"); }
+    else{ selectedAttributes.push(attr.code); li.classList.add("selected"); }
+    updateURL();
+  });
+  attributesList.appendChild(li);
+});
+
+/* Ownership chips with icons */
+buildOwnershipChips();
+
+/* formats & types chips */
+buildChip(formatChips, formatOptions, selectedFormats, false); // show codes
+buildChip(typeChips, typeOptions, selectedTypes, true);
+
+/* Sort list */
+orderList.innerHTML = "";
+sortOptions.forEach(opt => {
+  const li = document.createElement("li");
+  li.className = "attr-item";
+
+  const left = document.createElement("div");
+  left.style.display = "flex";
+  left.style.alignItems = "center";
+  left.style.gap = "10px";
+  left.innerHTML = `<i class="fa-solid ${opt.icon}"></i><div>${opt.label}</div>`;
+  li.appendChild(left);
+
+  const toggleWrap = document.createElement("div");
+  toggleWrap.className = "sort-toggle";
+  toggleWrap.style.display = "none";
+
+  const btnAsc = document.createElement("button");
+  btnAsc.textContent = "↑";
+  const btnDesc = document.createElement("button");
+  btnDesc.textContent = "↓";
+  toggleWrap.appendChild(btnAsc);
+  toggleWrap.appendChild(btnDesc);
+
+  btnAsc.addEventListener("click", (e) => { e.stopPropagation(); if(selectedSort.includes(opt.code)){ sortDirections[opt.code] = "asc"; updateURL(); updateSortButtons(); }});
+  btnDesc.addEventListener("click", (e) => { e.stopPropagation(); if(selectedSort.includes(opt.code)){ sortDirections[opt.code] = "desc"; updateURL(); updateSortButtons(); }});
+
+  li.addEventListener("click", () => {
+    const idx = selectedSort.indexOf(opt.code);
+    if(idx !== -1){
+      selectedSort.splice(idx,1);
+      delete sortDirections[opt.code];
+      li.classList.remove("selected");
+      toggleWrap.style.display = "none";
+    } else {
+      selectedSort.push(opt.code);
+      sortDirections[opt.code] = "asc";
+      li.classList.add("selected");
+      toggleWrap.style.display = "flex";
+    }
+    updateURL();
+    updateSortButtons();
+  });
+
+  li.appendChild(toggleWrap);
+  orderList.appendChild(li);
+});
+
+/* Update sort toggle visuals */
+function updateSortButtons(){
+  const lis = orderList.querySelectorAll("li");
+  lis.forEach(li => {
+    const leftLabel = li.querySelector("div > div")?.textContent || li.textContent.trim();
+    const opt = sortOptions.find(s => s.label === leftLabel);
+    if(!opt) return;
+    const code = opt.code;
+    const toggleWrap = li.querySelector(".sort-toggle");
+    if(selectedSort.includes(code)){
+      toggleWrap.style.display = "flex";
+      const buttons = toggleWrap.querySelectorAll("button");
+      buttons.forEach(b => b.classList.remove("active"));
+      if(sortDirections[code] === "asc") toggleWrap.querySelector("button:first-child").classList.add("active");
+      else toggleWrap.querySelector("button:last-child").classList.add("active");
+    } else {
+      toggleWrap.style.display = "none";
+    }
+  });
+}
+
+/* ---------------- Search toggles logic (single active) ---------------- */
+(function initSearchToggles(){
+  const toggles = Array.from(searchTogglesWrap.querySelectorAll(".search-toggle"));
+  toggles.forEach(t => {
+    t.addEventListener("click", () => {
+      const type = t.getAttribute("data-type");
+      if(selectedSearchType === type){
+        selectedSearchType = null;
+        t.classList.remove("active");
+      } else {
+        toggles.forEach(x => x.classList.remove("active"));
+        t.classList.add("active");
+        selectedSearchType = type;
+      }
+      handleStagExclusivity();
+      updateURL();
+    });
+  });
+})();
+
+function handleStagExclusivity(){
+  const isStag = (selectedSearchType === "stag");
+  const sectionsToDisable = [
+    "#custom-body",
+    "#rating-body",
+    "#ownership-body",
+    "#formats-body",
+    "#types-body",
+    "#perpage-body",
+    "#order-body",
+    "#attributesList"
+  ];
+  sectionsToDisable.forEach(sel => {
+    const el = document.querySelector(sel);
+    if(!el) return;
+    if(isStag) el.classList.add("disabled-overlay");
+    else el.classList.remove("disabled-overlay");
+  });
+}
+
+/* ---------------- Rating slider events ---------------- */
+rangeMin.addEventListener("input", e => { ratingMin = Math.min(parseInt(e.target.value), ratingMax); updateSliderRange(); updateURL(); });
+rangeMax.addEventListener("input", e => { ratingMax = Math.max(parseInt(e.target.value), ratingMin); updateSliderRange(); updateURL(); });
+renderRatingLabels();
+updateSliderRange();
+
+/* search text input */
+searchTextInput.addEventListener("input", e => { selectedSearchText = e.target.value; updateURL(); });
+
+/* other inputs */
+usernameInput.addEventListener("input", updateURL);
+itemsPerPage.addEventListener("input", e => { perPage = e.target.value; updateURL(); });
+
+/* ---------------- URL building (search placed at end) ---------------- */
+function buildFiltersArray(){
+  // stag exclusive
+  if(selectedSearchType === "stag" && selectedSearchText && selectedSearchText.trim() !== ""){
+    const enc = encodeX(selectedSearchText.trim());
+    return [`stag/${enc}/`]; // exclusive
+  }
+
+  const arr = [];
+
+  if(selectedAttributes.length) arr.push("d.rp");
+  if(selectedAttributes.length) arr.push(...selectedAttributes);
+  if(!(ratingMin === 0 && ratingMax === 10)){
+    const a = Math.min(ratingMin, ratingMax);
+    const b = Math.max(ratingMin, ratingMax);
+    arr.push(`r${ratingVal(a)}-${ratingVal(b)}`);
+  }
+  if(selectedOwnership.length) arr.push("o" + selectedOwnership.join(""));
+  if(selectedFormats.length) arr.push("fmt." + selectedFormats.join("."));
+  if(selectedTypes.length) arr.push("typ" + selectedTypes.map(t => t).join(","));
+
+  if(selectedSort.length){
+    const sortParts = selectedSort.map(s => s + (sortDirections[s] === "desc" ? "d" : ""));
+    arr.push("ss." + sortParts.join("."));
+  }
+
+  if(perPage && perPage.toString().trim() !== "") arr.push("n" + perPage);
+
+  if(selectedSearchType && selectedSearchType !== "stag" && selectedSearchText && selectedSearchText.trim() !== ""){
+    const enc = encodeX(selectedSearchText.trim());
+    arr.push(`${selectedSearchType}/${enc}`);
+  }
+
+  return arr;
+}
+
+/* ---------------- Human readable order display (search last) ---------------- */
+function updateOrderDisplay(){
+  const parts = [];
+
+  if(selectedAttributes.length){
+    const labels = selectedAttributes.map(code => (attributes.find(a=>a.code===code)||{}).label || code);
+    parts.push("Custom Table: " + labels.join(", "));
+  }
+
+  if(!(ratingMin === 0 && ratingMax === 10)){
+    parts.push(`Rating: ${ratingVal(Math.min(ratingMin, ratingMax))} - ${ratingVal(Math.max(ratingMin, ratingMax))} Stars`);
+  }
+
+  if(selectedOwnership.length){
+    parts.push("Ownership: " + selectedOwnership.map(c => (ownershipOptions.find(o=>o.code===c)||{}).label || c).join(", "));
+  }
+
+  if(selectedFormats.length) parts.push("Formats: " + selectedFormats.join(", "));
+  if(selectedTypes.length) parts.push("Release Types: " + selectedTypes.map(t => (typeOptions.find(x=>x.code===t)||{}).label || t).join(", "));
+  if(perPage) parts.push("Items per Page: " + perPage);
+
+  if(selectedSort.length){
+    const sortReadable = selectedSort.map(s => {
+      const label = (sortOptions.find(x => x.code === s) || {}).label || s;
+      const dir = sortDirections[s] || "asc";
+      return `${label} (${dir})`;
+    });
+    parts.push("Order: " + sortReadable.join(", "));
+  }
+
+  if(selectedSearchType && selectedSearchText && selectedSearchText.trim() !== ""){
+    const map = {
+      strm_a: "Search Artist",
+      strm_l: "Search Title",
+      strm_q: "Search Review",
+      stag:   "Search Tag",
+      strm_b: "Search Label",
+      strm_h: "Search Genre",
+      strm_relyear: "Search Year/Decade"
+    };
+    const lbl = map[selectedSearchType] || selectedSearchType;
+    parts.push(`${lbl}: ${selectedSearchText.trim()}`);
+  }
+
+  orderDisplay.textContent = parts.length ? parts.join(" | ") : "No attributes selected.";
+}
+
+/* ---------------- Update URL & UI ---------------- */
+function updateURL(){
+  const filters = buildFiltersArray();
+  urlDisplay.textContent = getBaseURL() + (filters.length ? "/" + filters.join(",") : "");
+  updateOrderDisplay();
+  updateSortButtons();
+  handleStagExclusivity();
+}
+
+/* ---------------- Copy & Reset ---------------- */
+copyBtn.addEventListener("click", async () => {
+  try{
+    await navigator.clipboard.writeText(urlDisplay.textContent);
+    copyBtn.textContent = "Copied!";
+    setTimeout(()=> { copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i> Copy URL'; }, 1200);
+  } catch(e){
+    alert("Copy failed — select manually.");
+  }
+});
+
+resetBtn.addEventListener("click", () => {
+  selectedAttributes = [];
+  selectedOwnership = [];
+  selectedFormats = [];
+  selectedTypes = [];
+  selectedSort = [];
+  sortDirections = {};
+  ratingMin = 0; ratingMax = 10;
+  rangeMin.value = 0; rangeMax.value = 10;
+  usernameInput.value = "";
+  itemsPerPage.value = "";
+  perPage = "";
+  selectedSearchType = null;
+  selectedSearchText = "";
+  searchTextInput.value = "";
+
+  document.querySelectorAll(".attr-item.selected").forEach(el => el.classList.remove("selected"));
+  document.querySelectorAll(".chip.selected").forEach(el => el.classList.remove("selected"));
+  document.querySelectorAll(".search-toggle.active").forEach(el => el.classList.remove("active"));
+  document.querySelectorAll(".sort-toggle").forEach(t => t.style.display = "none");
+  updateSliderRange();
+  updateURL();
+  updateSortButtons();
+  handleStagExclusivity();
+});
+
+/* ---------------- Collapsibles (chevrons: down = expanded, up = collapsed) ---------------- */
+(function initCollapsibles(){
+  const headers = document.querySelectorAll(".subheader[data-toggle]");
+  headers.forEach(h => {
+    const key = h.getAttribute("data-toggle");
+    const body = document.getElementById(`${key}-body`);
+    if(!body) return;
+    // default expanded (chevron down)
+    h.addEventListener("click", () => {
+      const parent = h.closest(".section");
+      const chevIcon = h.querySelector(".chev i");
+      if(parent.classList.contains("section-collapsed")){
+        // expand -> chevron down
+        parent.classList.remove("section-collapsed");
+        if(chevIcon) chevIcon.className = "fa-solid fa-chevron-down";
+        body.style.height = null;
+      } else {
+        // collapse -> chevron up
+        parent.classList.add("section-collapsed");
+        if(chevIcon) chevIcon.className = "fa-solid fa-chevron-up";
+        body.style.height = "0px";
+      }
+    });
+  });
+})();
+
+/* ---------------- Init ---------------- */
+renderRatingLabels();
+updateSliderRange();
+updateURL();
+updateSortButtons();
+handleStagExclusivity();
+
+</script>
+</body>
+</html>
